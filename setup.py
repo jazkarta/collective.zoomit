@@ -6,7 +6,7 @@ version = '0.5'
 setup(name='collective.zoomit',
       version=version,
       description="Integration of Zoom.it hosted image zoom in plone.",
-      long_description=open("README.txt").read() + "\n" +
+      long_description=open("README.rst").read() + "\n" +
                        open(os.path.join("docs", "HISTORY.txt")).read(),
       # Get more strings from
       # http://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -26,14 +26,10 @@ setup(name='collective.zoomit',
       zip_safe=False,
       install_requires=[
           'setuptools',
-          'plone.app.dexterity [grok]',
-          'plone.namedfile [blobs]',
           # -*- Extra requirements: -*-
       ],
-      entry_points="""
-      # -*- Entry points: -*-
-      [z3c.autoinclude.plugin]
-      target = plone
+      entry_points="""[z3c.autoinclude.plugin]
+target = plone
       """,
       # The next two lines may be deleted after you no longer need
       # addcontent support from paster and before you distribute
