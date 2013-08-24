@@ -1,5 +1,5 @@
-Introduction
-============
+collective.zoomit
+=================
 
 This add-on integrates the `zoom.it <http://zoom.it/>`_ service into
 Plone.  It includes a Dexterity behavior which can be assigned to
