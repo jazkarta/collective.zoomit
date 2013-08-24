@@ -9,7 +9,7 @@ jQuery(function () {
                 var script = jQuery(data.embed).attr('src');
                 window.backupwrite = document.write;
                 var writer_div = jQuery('<div></div>');
-                writer_div.insertBefore(image);
+                writer_div.insertBefore(image.parent());
                 document.write = function (str) {
                     writer_div.append(str);
                 }
