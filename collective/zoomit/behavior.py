@@ -11,14 +11,14 @@ from plone.behavior.annotation import AnnotationsFactoryImpl
 from Products.CMFPlone.log import log
 from Products.statusmessages.interfaces import IStatusMessage
 
-from . import MessageFactory as _
+from .config import DEBUG
 from .interfaces import IZoomItImage, IZoomItInfo
+from . import MessageFactory as _
 
 
 ZOOMIT_UPLOAD_URL = 'http://api.zoom.it/v1/content/'
 SAMPLE_DEBUG_IMAGE = 'http://imaging.nikon.com/lineup/dslr/d90/img/sample/pic_003b.jpg'
 UPDATE_WAIT = timedelta(seconds=300) # 5 minutes
-DEBUG = False
 
 opener = urllib2.OpenerDirector()
 opener.add_handler(urllib2.HTTPHandler())
@@ -77,14 +77,17 @@ class ZoomItAdapter(AnnotationsFactoryImpl, grok.Adapter):
             self.id = None
             return
         image_url = self.image_url
+        if self.ready:
+            # Updating an already processed image, we need to force a
+            # new URL (and avoid possible front-end caches)
+            image_url = '%s?cachebust=%s'%(image_url, time.time())
         is_local = '://localhost:' in image_url or '://127.' in image_url
         if DEBUG and is_local:
             image_url = SAMPLE_DEBUG_IMAGE
         elif is_local:
             return
         request = urllib2.Request('%s?url=%s'%(ZOOMIT_UPLOAD_URL,
-                                               quote_plus('%s#cachebust=%s'%(
-                                                      image_url, time.time()))),
+                                               quote_plus(image_url)),
                                   headers={"Accept" : "application/json"})
         try:
             response = opener.open(request)

@@ -57,6 +57,12 @@ viewer when the processed image is available.
 
 See the `FAQ <http://zoom.it/pages/faq/>`_.
 
+Because Zoom.it requires a publicly accessible URL to retrieve the
+image, this add-on will not work from local addresses.  The adapter
+intentionally skips requests originating from loopback addresses, but
+a placeholder image can be used for testing from a local address by setting
+``collective.zoomit.config.DEBUG`` to ``True``.
+
 
 Contributors
 ------------
