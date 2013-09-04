@@ -27,7 +27,7 @@
           <tal:progress tal:define="progress view/info/progress|nothing">
           <dt>Progress</dt>
           <dd tal:condition="progress"
-              tal:content="python:'{0:d}%'.format(progress*100)">id</dd>
+              tal:content="python:'{0:.0f}%'.format(progress*100)">id</dd>
           </tal:progress>
           <dt>Embed HTML</dt>
           <dd tal:content="view/info/embed|nothing">embed</dd>
