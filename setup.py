@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import os
 
-version = '0.5'
+version = '0.6'
 
 setup(name='collective.zoomit',
       version=version,
@@ -15,9 +15,9 @@ setup(name='collective.zoomit',
         "Programming Language :: Python",
         "Topic :: Software Development :: Libraries :: Python Modules",
         ],
-      keywords='',
-      author='',
-      author_email='',
+      keywords='Deepzoom Zoom.it Images Plone',
+      author='Alec Mitchell, Jazkarta, Inc',
+      author_email='alecpm@gmail.com',
       url='http://svn.plone.org/svn/collective/',
       license='GPL',
       packages=find_packages(exclude=['ez_setup']),
