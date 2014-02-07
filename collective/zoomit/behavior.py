@@ -18,11 +18,12 @@ from . import MessageFactory as _
 
 ZOOMIT_UPLOAD_URL = 'http://api.zoom.it/v1/content/'
 SAMPLE_DEBUG_IMAGE = 'http://imaging.nikon.com/lineup/dslr/d90/img/sample/pic_003b.jpg'
-UPDATE_WAIT = timedelta(seconds=300) # 5 minutes
+UPDATE_WAIT = 300 # 5 minutes
 
 opener = urllib2.OpenerDirector()
 opener.add_handler(urllib2.HTTPHandler())
 opener.add_handler(urllib2.HTTPDefaultErrorHandler())
+
 
 class ZoomItAdapter(AnnotationsFactoryImpl, grok.Adapter):
     grok.context(IZoomItImage)
@@ -43,6 +44,7 @@ class ZoomItAdapter(AnnotationsFactoryImpl, grok.Adapter):
         self.embed = data['embedHtml']
         if data.get('dzi', None) and data['dzi'].get('url', None):
             self.dzi = data['dzi']['url']
+        self.retry_after = None
 
     @property
     def api_url(self):
@@ -93,18 +95,34 @@ class ZoomItAdapter(AnnotationsFactoryImpl, grok.Adapter):
             response = opener.open(request)
         except urllib2.HTTPError, response:
             pass
-        if response.getcode() == 301:
+        code = response.getcode()
+        if code == 301:
             info = response.info()
             self._set_content(response)
             assert self.api_url == info['Location']
         else:
-            log('Zoomit create call failed for %s: %s, %s'%(
+            data = response.read()
+            headers = response.info()
+            retry_after = headers.get('Retry-After')
+            if retry_after:
+                try:
+                    retry_after = int(retry_after)
+                except (ValueError, TypeError):
+                    retry_after = None
+            log('Zoomit create call failed for %s: %s, %s' % (
                 image_url,
-                response.getcode(),
-                response.read()))
+                code,
+                data))
             self.failed = True
-            self.last_status = response.getcode()
-            self.last_response = response.read()
+            self.last_status = code
+            if retry_after:
+                log('Retry after %s seconds' % retry_after)
+                self.last_response = (data +
+                                      ('\n Retry after %s seconds' %
+                                       retry_after))
+            else:
+                self.last_response = data
+            self.retry_after = retry_after
 
     def update_status(self):
         if not self.api_url:
@@ -115,16 +133,32 @@ class ZoomItAdapter(AnnotationsFactoryImpl, grok.Adapter):
             response = opener.open(request)
         except urllib2.HTTPError, response:
             pass
-        if response.getcode() in (200, 301, 302):
+        code = response.getcode()
+        if code in (200, 301, 302):
             self._set_content(response)
         else:
-            log('Zoomit update call failed %s: %s, %s'%(
+            data = response.read()
+            headers = response.info()
+            retry_after = headers.get('Retry-After')
+            if retry_after:
+                try:
+                    retry_after = int(retry_after)
+                except (ValueError, TypeError):
+                    retry_after = None
+            log('Zoomit update call failed %s: %s, %s' % (
                 self.context.absolute_url(),
-                response.getcode(),
-                response.read()))
+                code,
+                data))
             self.failed = True
-            self.status = response.getcode()
-            self.last_response = response.read()
+            self.status = code
+            if retry_after:
+                log('Retry after %s seconds' % retry_after)
+                self.last_response = (data +
+                                      ('\n Retry after %s seconds' %
+                                       retry_after))
+            else:
+                self.last_response = data
+            self.retry_after = retry_after
         self.update_timestamp = datetime.now()
 
 
@@ -191,8 +225,9 @@ class ZoomItJSON(grok.View):
         self.request.response.setHeader('Content-Type',
                                         'application/json; charset=utf-8')
         # Check if the widget is ready
+        wait_time = timedelta(seconds=self.info.retry_after or UPDATE_WAIT)
         if (not self.info.ready and self.info.update_timestamp
-            and (datetime.now() - self.info.update_timestamp) < UPDATE_WAIT):
+                and (datetime.now() - self.info.update_timestamp) < wait_time):
             # We perform a write operation on a GET here, but only if
             # the image is not ready and at most once every 10 minutes
             self.info.update_status()
@@ -212,7 +247,11 @@ def update_on_edit(context, event):
     image_modified = info.image_modified
     if image_modified is not None:
         # Create if not yet created or image was modified in the last 3 seconds
-        if (datetime.now() - image_modified) <= timedelta(seconds=3) or not info.id:
+        wait_time = timedelta(seconds=info.retry_after or UPDATE_WAIT)
+        now = datetime.now()
+        if ((not info.id and not info.update_timestamp) or (not info.id and
+            (now - info.update_timestamp) < wait_time)) or (
+                (now - image_modified) <= timedelta(seconds=3)):
             info.create_content()
         elif info.id and not info.ready:
             info.update_status()

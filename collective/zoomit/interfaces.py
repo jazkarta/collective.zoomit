@@ -26,6 +26,9 @@ class IZoomItInfo(Interface):
     update_timestamp = schema.Datetime(title=_(u'Last Timestamp'),
                                        required=False)
 
+    retry_after = schema.Int(title=_(u'Retry After'),
+                             required=False)
+
     embed = schema.Text(title=_(u'Embed HTML'))
 
     dzi = schema.URI(title=_(u'DZI URL'),
