@@ -79,15 +79,17 @@ class ZoomItAdapter(AnnotationsFactoryImpl, grok.Adapter):
             self.id = None
             return
         image_url = self.image_url
-        if self.ready:
-            # Updating an already processed image, we need to force a
-            # new URL (and avoid possible front-end caches)
-            image_url = '%s?cachebust=%s'%(image_url, time.time())
         is_local = '://localhost:' in image_url or '://127.' in image_url
         if DEBUG and is_local:
             image_url = SAMPLE_DEBUG_IMAGE
         elif is_local:
             return
+
+        if self.ready:
+            # Updating an already processed image, we need to force a
+            # new URL (and avoid possible front-end caches)
+            image_url = '%s?cachebust=%s'%(image_url, time.time())
+
         request = urllib2.Request('%s?url=%s'%(ZOOMIT_UPLOAD_URL,
                                                quote_plus(image_url)),
                                   headers={"Accept" : "application/json"})
@@ -123,6 +125,7 @@ class ZoomItAdapter(AnnotationsFactoryImpl, grok.Adapter):
             else:
                 self.last_response = data
             self.retry_after = retry_after
+        self.update_timestamp = datetime.now()
 
     def update_status(self):
         if not self.api_url:
@@ -170,6 +173,9 @@ class ZoomItUpdater(form.Form):
     label = _(u'Zoom.it Information')
 
     def update(self):
+        if not self._show_create():
+            IStatusMessage(self.request).addStatusMessage(
+                _(u'Cannot initialize zoom.it on unpublished images'))
         super(ZoomItUpdater, self).update()
         self.info = IZoomItInfo(self.context)
 
@@ -179,6 +185,9 @@ class ZoomItUpdater(form.Form):
     def _show_update(self):
         info = IZoomItInfo(self.context)
         return bool(info.api_url) and not info.ready
+
+    def _show_create(self):
+        return 'Anonymous' in rolesForPermissionOn('View', self.context)
 
     @button.buttonAndHandler(u'Update Status', condition=_show_update)
     def update_image(self, action):
@@ -195,7 +204,7 @@ class ZoomItUpdater(form.Form):
         self._redirect_to_self()
         return ''
 
-    @button.buttonAndHandler(u'Recreate Image')
+    @button.buttonAndHandler(u'Recreate Image', condition=_show_create)
     def create_image(self, action):
         zoomit_info = IZoomItInfo(self.context)
         zoomit_info.create_content()
@@ -207,6 +216,9 @@ class ZoomItUpdater(form.Form):
         elif zoomit_info.id:
             IStatusMessage(self.request).addStatusMessage(
                 _(u'Image creation succeeded'))
+            if not zoomit_info.ready:
+                IStatusMessage(self.request).addStatusMessage(
+                _(u'The item must stay published while waiting to process the image'))
         else:
             IStatusMessage(self.request).addStatusMessage(
                 _(u'Unable to create image, ensure that the image is publicly '

@@ -36,6 +36,18 @@
                  tal:attributes="href dzi" 
                  tal:content="dzi">dzi url</a>
           </dd>
+          <dt>Last Status</dt>
+          <dd><a href="" tal:define="status view/info/last_status|nothing"
+                 tal:content="status">Status Code</a>
+          </dd>
+          <dt>Last Updated</dt>
+          <dd><a href="" tal:define="date view/info/update_timestamp|nothing"
+                 tal:content="date/isoformat|nothing">Date</a>
+          </dd>
+          <dt>Seconds to Retry (if failed)</dt>
+          <dd><a href="" tal:define="retry view/info/retry_after|nothing"
+                 tal:content="retry"></a>
+          </dd>
         </dl>
         
         <metal:block use-macro="context/@@ploneform-macros/titlelessform" />
