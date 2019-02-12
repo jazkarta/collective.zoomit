@@ -49,7 +49,7 @@
       />
   
   <subscriber
-      for=".interfaces.IZoomItImage zope.app.container.interfaces.IObjectAddedEvent"
+      for=".interfaces.IZoomItImage zope.lifecycleevent.interfaces.IObjectAddedEvent"
       handler=".behavior.update_on_edit"
       />
 
